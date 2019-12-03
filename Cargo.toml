@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 backtrace = "0.3.40"
-derive-error = "0.0.4"
+err-derive = "0.2.1"
 derive_more = "0.99.2"
 failure = "0.1.6"
 objekt = "0.1.2"

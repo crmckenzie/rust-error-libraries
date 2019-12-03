@@ -15,39 +15,46 @@
 ///
 /// 
 use std::sync::Arc;
-use snafu::*;
+use backtrace::Backtrace;
 
-
-
-#[derive(Clone, Debug, Snafu)]
+#[derive(Clone, Debug, Error)]
 pub enum InternalError {
-    #[snafu(display("This is my internal error"))]
-    FooBar 
-    //{
-        // Snafu won't let us handle the construction of the backtrace.
-        // backtrace: Arc<Backtrace>
-    //},
-}
-
-#[derive(Clone, Debug, Snafu)]
-pub enum PublicError {
-    #[snafu(display("Public Error: {:?}", source))]
-    FredBob { 
-        source: Arc<dyn std::error::Error>,
-        // Snafu won't let us handle the construction of the backtrace.
-        // backtrace: Arc::new(Backtrace) 
+    #[error(display="This is my internal error.")]
+    FooBar{
+        backtrace: Backtrace
     },
 }
 
+#[derive(Clone, Debug, Error)]
+pub enum PublicError {
+    #[error(display = "Public Error: {:?}", source)]
+    FredBob { 
+        source: Arc<dyn std::error::Error>,
+        backtrace: Backtrace
+    },
+}
+
+impl From<InternalError> for PublicError {
+    fn from(input: InternalError) -> PublicError {
+        match input.clone() {
+            InternalError::FooBar { backtrace } => {
+                PublicError::FredBob {
+                    source: Arc::new(input),
+                    backtrace,
+                }
+            }
+        }
+    }
+}
+
 fn internal() -> Result<i32, InternalError> {
-    Err(InternalError::FooBar)
+    Err(InternalError::FooBar {
+        backtrace: backtrace::Backtrace::new()
+    })
 }
 
 pub fn raise_public_error() -> Result<i32, PublicError> {
-    internal().map_err(|input| PublicError::FredBob { 
-        source: Arc::new(input),
-        // backtrace: input.backtrace()
-    })
+    internal().map_err(|input| input.into())
 }
 
 #[cfg(test)]
