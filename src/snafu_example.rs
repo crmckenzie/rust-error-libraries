@@ -39,15 +39,26 @@ pub enum PublicError {
     },
 }
 
+
+impl From<InternalError> for PublicError {
+    fn from(input: InternalError) -> PublicError {
+        match input.clone() {
+            InternalError::FooBar => {
+                PublicError::FredBob {
+                    source: Arc::new(input),
+                }
+            }
+        }
+    }
+}
+
+
 fn internal() -> Result<i32, InternalError> {
     Err(InternalError::FooBar)
 }
 
 pub fn raise_public_error() -> Result<i32, PublicError> {
-    internal().map_err(|input| PublicError::FredBob { 
-        source: Arc::new(input),
-        // backtrace: input.backtrace()
-    })
+    internal().map_err(|input| input.into())
 }
 
 #[cfg(test)]
